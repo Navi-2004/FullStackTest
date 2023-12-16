@@ -13,10 +13,16 @@ app.use(express.json());
 dotenv.config()
 
 const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
   user: process.env.POSTGRES_USER,
   host: process.env.POSTGRES_HOST,
   database: process.env.DATABASE,
   password: process.env.PASSWORD,
+  ssl:{
+    rejectUnauthorized:false,
+  },
+  sslmode:'require',
+
 });
 app.get('/', (req, res) => {
   const sql = "SELECT * FROM employee";
@@ -32,7 +38,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/create', (req, res) => {
-  const sql = "INSERT INTO employee (\"Name\", \"Age\", \"Position\", \"Place\", \"Date\") VALUES ($1, $2, $3, $4, $5) RETURNING *";
+  const sql = "INSERT INTO employee (name, age, position, place, date) VALUES ($1, $2, $3, $4, $5) RETURNING *";
   
   const values = [req.body.name, req.body.age, req.body.position, req.body.place, req.body.date];
 
@@ -47,13 +53,14 @@ app.post('/create', (req, res) => {
   });
 });
 
+
 app.put('/update/:id', (req, res) => {
-  const employeeId = req.params.id;
+  const id = req.params.id;
   const { name, age, position, place, date } = req.body;
 
-  const sql = "UPDATE employee SET \"Name\" = $1, \"Age\" = $2, \"Position\" = $3, \"Place\" = $4, \"Date\" = $5 WHERE \"ID\" = $6 RETURNING *";
+  const sql = 'UPDATE employee SET name = $1, age = $2, position = $3, place = $4, date = $5 WHERE id = $6 RETURNING *';
 
-  const values = [name, age, position, place, date, employeeId];
+  const values = [name, age, position, place, date, id];
 
   pool.query(sql, values, (err, result) => {
       if (err) {
@@ -72,7 +79,7 @@ app.put('/update/:id', (req, res) => {
 app.delete('/deleteStudent/:id', (req, res) => {
   const employeeId = req.params.id;
 
-  const sql = "DELETE FROM employee WHERE \"ID\" = $1 RETURNING *";
+  const sql = 'DELETE FROM employee WHERE id = $1 RETURNING *';
 
   pool.query(sql, [employeeId], (err, result) => {
       if (err) {
@@ -89,7 +96,6 @@ app.delete('/deleteStudent/:id', (req, res) => {
   });
 });
 
-// Don't forget to end the pool when your application exits
 process.on('exit', () => {
   pool.end();
 });
